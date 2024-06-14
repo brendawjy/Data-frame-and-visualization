@@ -1,0 +1,60 @@
+rm(list=ls())
+library(tidyverse)
+
+# We are going to construct a data frame, of 50 states x 10 variables. 
+# The first 8 variables are numeric and the last 2 are factors. 
+# The numeric variables here come from the built-in state.x77 matrix
+# which records various demographic factors on 50 US states, 
+# measured in the 1970s.
+# we will combine 3 datasets: state.x77, state.region, state.division
+View(state.x77)
+View(state.region)
+View(state.division)
+
+# create the dataframe
+state.df <- data.frame(state.x77, Region = state.region, Division = state.division)
+View(state.df)
+
+# now add a column containing the state abbreviations that are stored
+# in the built-in vector state.abb. Name this column Abbr. 
+state.df<- data.frame(state.df, Abbr = state.abb)
+View(state.df)
+dim(state.df)
+
+# check out the first 3 rows
+head(state.df, 3)
+
+# now remove the "Region" column from the dataset
+state.df1 <- state.df[,-9]
+# check out the new dataset that is without the "Region" column
+head(state.df1, 3)
+
+# Add two columns containing the x and y coordinates 
+# (longitude and latitude, respectively) of the center of the states, 
+# that are stored in the (existing) list state.center. 
+# Name these two columns Center.x and Center.y
+
+# check out the state.center dataset first to see what the column
+# names are
+View(state.center)
+
+# now update the dataset
+state.df1 <- data.frame(state.df1, Center.x = state.center$x, Center.y = state.center$y)
+# check out the first 3 rows
+head(state.df1, 3)
+
+# Create a new data frame which contains only those states whose 
+# longitude is less than -100. 
+state.df2 <- state.df1[state.df1$Center.x < -100,]
+head(state.df2, 3)
+
+# Create a new data frame which contains only the states whose 
+# longitude is less than -100, and whose murder rate is above 9%. 
+# Among the states in this new data frame, which has the highest 
+# average life expectancy?
+
+state.df3 <- state.df1[state.df1$Center.x < -100 & state.df1$Murder > 9,]
+View(state.df3)
+# to see the value of other columns in the state with highest life
+# expectancy
+state.df3[which.max(state.df3$Life.Exp),]
