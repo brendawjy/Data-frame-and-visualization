@@ -1,0 +1,154 @@
+rm(list=ls())
+library(tidyverse)
+
+# load the dataset from github
+rio = read.csv("https://raw.githubusercontent.com/BUSN32100/data_files/master/rio.csv")
+# figure out what type of object "rio" is, the dimension, and column names
+class(rio)
+dim(rio)
+colnames(rio)
+# we can say that the rio dataset is data about competing athletes
+# in the rio olympics
+
+# How many athletes competed in the 2016 Summer Olympics? 
+# you can see of course from the "ID" column, but first, ensure that 
+# there is no duplicate values
+has_duplicates <- any(duplicated(rio$id))
+View(has_duplicates)
+# if the value is TRUE, there are duplicates. If FALSE then no duplicates
+# since the value is FALSE then the number of competed athletes equal to
+# the number of rows, which was obtained in the dim(rio) command
+
+# Using class, check the data type of variable nationality.
+class(rio$nationality)
+
+# Using levels(), check how many countries were represented, 
+length(levels(as.factor(rio$nationality)))
+# add length because if you just use levels() it will give you the list
+# of the unique values. with length it will show the number of the 
+# unique values
+
+# What were these countries? 
+levels(as.factor(rio$nationality))
+
+# Use summary() to check which country brought the most athletes
+list_of_countries <- summary(as.factor(rio$nationality))
+# this resulted in "named vector" not really suitable for further analysis, i think
+# change it into data frame
+list_countries <- data.frame(country = names(list_of_countries), athletes = as.integer(list_of_countries))
+View(list_countries) # check out the data frame
+
+# and how many was this? 
+# you can find out by sorting based on the number of athletes
+list_countries <- arrange(list_countries, desc(list_countries$athletes))
+# and the answer is USA with 567 athletes
+
+# btw, can also use piping
+#list_countries <- rio %>% 
+#group_by(nationality) %>% 
+#summarise(countries = n())
+
+# Do the same for the men and women separately.
+summary_by_sex_nation <- rio %>% 
+  group_by(nationality) %>%
+  summarise(
+    male_count = sum(sex == 'male', na.rm = TRUE),
+    female_count = sum(sex == 'female', na.rm = TRUE),
+    total_count = n()) %>% 
+    arrange(desc(total_count))
+
+# What are the 5 most represented countries, for the men?
+summary_by_sex_nation_male <- arrange(summary_by_sex_nation,desc(summary_by_sex_nation$male_count))
+# and the answer is Brazil with 269 male athletes
+
+# and for the women?
+summary_by_sex_nation_female <- arrange(summary_by_sex_nation,desc(summary_by_sex_nation$female_count))
+# and the answer is USA with 303 female athletes
+
+# How many medals of each type—gold, silver, bronze—were awarded at this 
+# Olympics? Are they equal? Is this result surprising?
+# can you explain what you are seeing?
+summary_by_medal <- rio %>% 
+  group_by(nationality) %>% 
+  summarise(
+    total_gold = sum(gold),
+    total_silver = sum(silver),
+    total_bronze = sum(bronze),
+    total_medal = sum(gold) + sum(silver) + sum(bronze)
+  ) %>% 
+  arrange(desc(total_medal))
+
+# total amount for each medal
+sum(rio$gold)
+sum(rio$silver)
+sum(rio$bronze)
+
+# Create a column called total which adds the number of gold, silver, and 
+# bronze medals for each athlete, and add this column to rio. 
+# Which athlete had the most number of medals and how many was this? 
+# Gold medals? Silver medals? In the case of ties, here, 
+# display all the relevant athletes
+rio1 <- data.frame(rio, total_medal = rio$gold + rio$silver + rio$bronze)
+rio1 <- arrange(rio1, desc(rio1$total_medal))
+
+## VISUALIZATION PRACTICE
+# create histogram to show the distribution of total medals
+hist(rio1$total_medal)
+
+# creating histogram with red border and white fill
+ggplot(data = rio1, mapping = aes(x = total_medal))+
+  geom_histogram(alpha = 0.8, fill = 'white', color = 'red')
+
+# Create a new numeric variable called age, equal to 2016 - (the year of birth)
+# Add the age variable to the rio data frame. 
+age <- 2016 - rio1$year_of_birth
+rio1 <- data.frame(rio1, age)
+# Who is the oldest athlete, and how old is he/she? 
+rio1[which.max(rio1$age),]
+# Youngest athlete, and how old is he/she? In the case of ties, display all the relevant athletes. 
+rio1[which.min(rio1$age),]
+# Use histogram to plot the distribution of athlete’s age.
+hist(rio1$age)
+# or, using ggplot
+ggplot(data = rio1, aes(x = age))+
+  geom_histogram(binwidth = 1)
+
+# Among athletes who won the medal, find out who's the oldest and youngest
+# first make a subset that contains only athletes who won medal
+rio2 <- rio1[rio1$total_medal > 0,]
+# find out the oldest athlete who won medal
+rio2[which.max(rio2$age),]
+# find out the youngest athlete who won medal
+rio2[which.min(rio2$age),]
+# comparing the age histogram, what differences do you see?
+hist(rio2$age)
+# or, using ggplot
+ggplot(data = rio2, aes(x = age))+
+  geom_histogram(binwidth = 1)
+# i think the second histogram emphasizes that the most winning medals athletes are those between the age of 20 to 30
+summary(rio2)
+
+# Now plot the histogram separately for each sport using facet_wrap(). 
+# Pick 3 sports to check how old are the youngest and oldest athletes play them. 
+# Do you notice any sports that has a parculiar age pattern? 
+ggplot(data = rio2, aes(x = age))+
+  geom_histogram(binwidth = 1)+
+  facet_wrap(~ sport)
+  #scale_y_continuous(limits = c(0,200)) # to make the y axis scaled from 0 to 200
+# seems that it is aquatics, athletics, and tennis that are dominated by 30 year olds
+
+# Now plot the box plot for height of each sport using geom_boxplot(). 
+ggplot(data = rio2, aes(y = height, x = sport))+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # to make the texts on horizontal line readable. 
+# can also change the angle to 90
+# Repeat this for weight.
+ggplot(data = rio2, aes(y = weight, x = sport))+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Now plot the relationship between height and mass, separately for each sport using facet_wrap().
+# Set the transparency(alpha) to 0.1 and use color to represent athletes’ genders.
+ggplot(data = rio2, aes(x = height, y = weight, color = sex))+
+  geom_point(alpha = 0.1)+
+  facet_wrap(~sport)
